@@ -2,6 +2,5 @@
 venv/
 __pycache__/
 DODI-6490.pdf
-../notes.md
 node_modules/
 dist/
