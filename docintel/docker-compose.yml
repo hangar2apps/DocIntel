@@ -1,0 +1,36 @@
+# services reach others by their service name instead of localhost
+# ie: rag-service reaches db service at rag-service.environment.DB_HOST by using it's service name 'db' and gateway.environment.GRPC_HOST reaches rag-service by it's service name 'rag-service'
+# ${OPENAI_API_KEY} pulls from the shell environment so no hardcoding the key in the file
+# depends_on is the start order. db first (it doesnt depend on anything), then python, then gateway
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_PASSWORD: docintel
+      POSTGRES_DB: docintel
+    ports:
+      - "5433:5432"
+
+  rag-service:
+    build: .
+    ports:
+      - "50051:50051"
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: docintel
+      DB_USER: postgres
+      DB_PASSWORD: docintel
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    depends_on:
+      - db
+
+  gateway:
+    build: ./gateway
+    ports:
+      - "3000:3000"
+    environment:
+      GRPC_HOST: rag-service:50051
+    depends_on:
+      - rag-service

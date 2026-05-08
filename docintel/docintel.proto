@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package docintel;
+
+// this is like your Express router. It defines three endpoints (called RPCs instead of routes).
+service DocumentIntelligence {
+  // Ingest a document: chunk it, embed it, store it
+  rpc IngestDocument (IngestRequest) returns (IngestResponse);
+
+  // Query across ingested documents with RAG
+  // stream means instead of returning one response, the server sends multiple QueryResponse messages back over time.
+  rpc Query (QueryRequest) returns (stream QueryResponse);
+
+  // List ingested documents
+  rpc ListDocuments (ListRequest) returns (DocumentList);
+}
+
+// message - these are your request/response types. Same concept as TypeScript interfaces. 
+// the numbers (1,2,3) are field identifiers used for binary serialization. They are used when encoding data over the wire. 
+// repeated means it's an array. ie: repeated string document_ids = document_ids: string[]
+
+// IngestRequest - what caller sends
+message IngestRequest {
+  string filename = 1;
+  bytes content = 2;        // raw PDF bytes - the PDF file as bytes, not a file path
+  string doc_type = 3;      // optional category tag
+}
+// Ingest Response - what comes back
+message IngestResponse {
+  string document_id = 1;
+  int32 chunks_created = 2;
+  string status = 3;
+}
+
+message QueryRequest {
+  string question = 1;
+  repeated string document_ids = 2;   // empty = search all
+  int32 max_chunks = 3;               // top-k for retrieval
+}
+
+message QueryResponse {
+  string token = 1;                   // streamed token
+  repeated SourceChunk sources = 2;   // populated on final message
+  bool done = 3;
+}
+
+message SourceChunk {
+  string document_id = 1;
+  string document_name = 2;
+  string chunk_text = 3;
+  float similarity_score = 4;
+}
+
+message ListRequest {
+  string doc_type = 1;    // optional filter
+}
+
+message DocumentList {
+  repeated DocumentMeta documents = 1;
+}
+
+message DocumentMeta {
+  string document_id = 1;
+  string filename = 2;
+  string doc_type = 3;
+  int32 chunk_count = 4;
+  string ingested_at = 5;
+}
